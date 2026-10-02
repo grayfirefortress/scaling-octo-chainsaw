@@ -2,6 +2,7 @@ import asyncio
 import html
 import logging
 import os
+from urllib.parse import quote
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -102,39 +103,59 @@ ADMIN_HELP_TEXT = (
 CONTENT = {
     "history": {
         "title": "🌍 История",
-        "items": [
+        "books": [
             ("«Sapiens. Краткая история человечества» — Юваль Ной Харари", "https://www.litres.ru/uval-noy-harari/sapiens-kratkaya-istoriya-chelovechestva/"),
             ("«История цивилизаций» — Арнольд Тойнби", "https://www.litres.ru/arnold-toynbi/istoriya-civilizaciy/"),
             ("«Война и мир» — Лев Толстой (исторический контекст)", "https://www.litres.ru/lev-tolstoy/voyna-i-mir/"),
-            ("Лекция «История мира» — курс на YouTube", "https://www.youtube.com/results?search_query=история+мира+лекция"),
         ],
+        "lectures": [
+            ("Новейшее время (XX–XXI века): видеокурс по всемирной истории", "https://www.youtube.com/playlist?list=PLv6ufBUWdRi3l45hk16CfXuJI1BBNZBke"),
+            ("История России: полный курс лекций, проф. Николай Борисов", "https://www.youtube.com/playlist?list=PLgctnI88vkPkgO2rR5ywYkhkpdtJVCS72"),
+            ("История культуры: цикл из 18 лекций", "https://www.youtube.com/playlist?list=PLUIs7NG0TxfOhhx4oBDz-GY8UWyAe2xkz"),
+        ],
+        "search": "история мира лекция",
     },
     "psychology": {
         "title": "🧠 Психология общения",
-        "items": [
+        "books": [
             ("«Как завоёвывать друзей и оказывать влияние на людей» — Дейл Карнеги", "https://www.litres.ru/deyl-karnegi/kak-zavoevyvat-druzey-i-okazyvat-vliyanie-na-ludey/"),
             ("«Язык телодвижений» — Аллан Пиз", "https://www.litres.ru/allan-piz/yazyk-telodvizheniy/"),
             ("«Тонкое искусство пофигизма» — Марк Мэнсон", "https://www.litres.ru/mark-menson/tonkoe-iskusstvo-pofigizma/"),
-            ("Лекция «Психология общения» — курс на YouTube", "https://www.youtube.com/results?search_query=психология+общения+лекция"),
         ],
+        "lectures": [
+            ("Г. М. Андреева: «Коммуникативная сторона общения» (МГУ)", "https://www.youtube.com/watch?v=4FRl3wS4Ed0"),
+            ("Секреты невербального общения: разбор на примерах телеведущих", "https://www.youtube.com/watch?v=FL1XPdQhq_M"),
+            ("Роберт Сапольски: «Биология поведения человека» (Стэнфорд, 25 лекций)", "https://www.youtube.com/playlist?list=PLGeXwa8swXj1AD8QsEnWqqMNaJjwmltmV"),
+        ],
+        "search": "психология общения лекция",
     },
     "body": {
         "title": "💪 Трансформация тела",
-        "items": [
+        "books": [
             ("«Анатомия силовых упражнений» — Фредерик Делавье", "https://www.litres.ru/frederik-delave/anatomiya-silovyh-uprazhneniy/"),
             ("«Стройность и сила» — руководство по фитнесу", "https://www.litres.ru/"),
             ("«Питание для набора мышечной массы» — гайд", "https://www.litres.ru/"),
-            ("Лекция «Трансформация тела» — курс на YouTube", "https://www.youtube.com/results?search_query=трансформация+тела+лекция"),
         ],
+        "lectures": [
+            ("Вячеслав Дубынин: «Мышцы и движения»", "https://www.youtube.com/watch?v=oCfs_KXwQJQ"),
+            ("Вячеслав Дубынин: «Обмен веществ, витамины»", "https://www.youtube.com/watch?v=VFnTG9qFPfM"),
+            ("Вячеслав Дубынин: «Мозг и сон»", "https://www.youtube.com/watch?v=Zdy9wy8N8Lo"),
+        ],
+        "search": "тренировки физиология лекция",
     },
     "stoicism": {
         "title": "🏛️ Стоический образ жизни",
-        "items": [
+        "books": [
             ("«Размышления» — Марк Аврелий", "https://www.litres.ru/mark-avreliy/razmyshleniya/"),
             ("«Письма к Луцилию» — Сенека", "https://www.litres.ru/luciy-anney-seneka/pisma-k-luciliu/"),
             ("«Энхиридион» — Эпиктет", "https://www.litres.ru/epiktet/enhiridion/"),
-            ("Лекция «Стоицизм» — курс на YouTube", "https://www.youtube.com/results?search_query=стоицизм+лекция"),
         ],
+        "lectures": [
+            ("Истоки философского мышления 14/14: Сенека, Эпиктет, Марк Аврелий", "https://www.youtube.com/watch?v=zvX_i-gxtcM"),
+            ("Александр Саликов: как связаны Сенека, Эпиктет и Марк Аврелий", "https://www.youtube.com/watch?v=0AqM3z8aSv8"),
+            ("Ментальная модель стоиков: Марк Аврелий, Сенека и Эпиктет", "https://www.youtube.com/watch?v=h1rlAFFVs9w"),
+        ],
+        "search": "стоицизм лекция",
     },
 }
 
@@ -159,6 +180,10 @@ def _track(message: Message, text: str | None = None) -> None:
     user = message.from_user
     db.save_message(user.id, user.username, text if text is not None else (message.text or ""))
     AWAITING_FEEDBACK.discard(user.id)
+
+
+def _link(title: str, url: str) -> str:
+    return f'<a href="{html.escape(url, quote=True)}">{html.escape(title)}</a>'
 
 
 def _who(user_id, username) -> str:
@@ -325,9 +350,17 @@ async def show_section(message: Message) -> None:
     _track(message)
     content = CONTENT[TITLE_TO_KEY[message.text]]
 
-    lines = [f"<b>{content['title']}</b>", "", "<i>Рекомендуемые материалы:</i>", ""]
-    for i, (title, url) in enumerate(content["items"], 1):
-        lines.append(f'{i}. <a href="{html.escape(url, quote=True)}">{html.escape(title)}</a>')
+    lines = [f"<b>{content['title']}</b>", "", "📚 <b>Книги</b>"]
+    for i, (title, url) in enumerate(content["books"], 1):
+        lines.append(f"{i}. {_link(title, url)}")
+
+    lines += ["", "🎬 <b>Лекции на YouTube</b>"]
+    for i, (title, url) in enumerate(content["lectures"], 1):
+        lines.append(f"{i}. {_link(title, url)}")
+
+    search_url = "https://www.youtube.com/results?search_query=" + quote(content["search"])
+    lines.append(f"🔎 {_link('Найти ещё на YouTube', search_url)}")
+
     lines.append(f"\n{LINE}\nВыберите другой вектор или откройте /menu")
 
     await message.answer("\n".join(lines), reply_markup=main_menu)
