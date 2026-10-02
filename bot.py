@@ -15,6 +15,7 @@ from aiogram.types import (
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
 )
 from dotenv import load_dotenv
 
@@ -63,26 +64,27 @@ ABOUT_TEXT = (
     "Проект, где знания, дисциплина и ясность мышления собраны в одном "
     "месте: без шума, воды и лишних слов.\n"
     f"\n{LINE}\n"
-    "<b>Четыре вектора роста</b>\n"
+    "<b>Три раздела</b>\n"
     "\n"
-    "🌍  <b>История</b>\n"
-    "<i>понять, как устроен мир</i>\n"
+    "🚀  <b>Карьерный путь</b>\n"
+    "<i>в разработке</i>\n"
     "\n"
-    "🧠  <b>Психология общения</b>\n"
-    "<i>слышать и быть услышанным</i>\n"
+    "🧠  <b>Интеллект</b>\n"
+    "<i>история, психология общения и стоицизм: книги и лекции "
+    "для развития мышления</i>\n"
     "\n"
-    "💪  <b>Трансформация тела</b>\n"
-    "<i>сила, энергия, форма</i>\n"
-    "\n"
-    "🏛  <b>Стоический образ жизни</b>\n"
-    "<i>спокойствие, не зависящее от обстоятельств</i>\n"
+    "💪  <b>Здоровье</b>\n"
+    "<i>тело, энергия и восстановление: книги и лекции</i>\n"
     f"\n{LINE}\n"
     "🧪 <b>Бета-версия.</b> Бот развивается прямо сейчас. Нашли ошибку или "
-    "есть идея? Нажмите «💬 Отзыв», это поможет сделать проект лучше.\n"
+    "есть идея? Оставьте отзыв командой /feedback, это поможет сделать "
+    "проект лучше.\n"
     "<i>В бета-режиме сообщения сохраняются для улучшения бота.</i>\n"
     "\n"
-    "Выберите вектор ниже 👇"
+    "Чтобы открыть разделы, отправьте /menu 👇"
 )
+
+MENU_TEXT = "◈ <b>Главное меню</b>\n\nВыберите раздел 👇"
 
 HELP_TEXT = (
     "<b>Команды</b>\n\n"
@@ -129,8 +131,8 @@ CONTENT = {
         ],
         "search": "психология общения лекция",
     },
-    "body": {
-        "title": "💪 Трансформация тела",
+    "health": {
+        "title": "💪 Здоровье",
         "books": [
             ("«Анатомия силовых упражнений» — Фредерик Делавье", "https://www.litres.ru/frederik-delave/anatomiya-silovyh-uprazhneniy/"),
             ("«Стройность и сила» — руководство по фитнесу", "https://www.litres.ru/"),
@@ -141,7 +143,7 @@ CONTENT = {
             ("Вячеслав Дубынин: «Обмен веществ, витамины»", "https://www.youtube.com/watch?v=VFnTG9qFPfM"),
             ("Вячеслав Дубынин: «Мозг и сон»", "https://www.youtube.com/watch?v=Zdy9wy8N8Lo"),
         ],
-        "search": "тренировки физиология лекция",
+        "search": "здоровье физиология лекция",
     },
     "stoicism": {
         "title": "🏛️ Стоический образ жизни",
@@ -161,11 +163,29 @@ CONTENT = {
 
 # Название кнопки -> ключ раздела (кнопки строятся из CONTENT, поэтому всегда совпадают)
 TITLE_TO_KEY = {data["title"]: key for key, data in CONTENT.items()}
+
+CAREER_BUTTON = "🚀 Карьерный путь"
+INTELLECT_BUTTON = "🧠 Интеллект"
+HEALTH_BUTTON = CONTENT["health"]["title"]
 FEEDBACK_BUTTON = "💬 Отзыв"
+BACK_BUTTON = "⬅️ Назад в меню"
+
+# Какие разделы входят в «Интеллект»
+INTELLECT_KEYS = ("history", "psychology", "stoicism")
 
 main_menu = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text=title)] for title in TITLE_TO_KEY]
-    + [[KeyboardButton(text=FEEDBACK_BUTTON)]],
+    keyboard=[
+        [KeyboardButton(text=CAREER_BUTTON)],
+        [KeyboardButton(text=INTELLECT_BUTTON)],
+        [KeyboardButton(text=HEALTH_BUTTON)],
+        [KeyboardButton(text=FEEDBACK_BUTTON)],
+    ],
+    resize_keyboard=True,
+)
+
+intellect_menu = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text=CONTENT[key]["title"])] for key in INTELLECT_KEYS]
+    + [[KeyboardButton(text=BACK_BUTTON)]],
     resize_keyboard=True,
 )
 
@@ -217,7 +237,7 @@ async def _save_feedback(message: Message, text: str) -> None:
     db.save_message(user.id, user.username, f"{FEEDBACK_PREFIX}{text}")
     AWAITING_FEEDBACK.discard(user.id)
 
-    await message.answer("Спасибо! Отзыв получен 🙌\nВы помогаете сделать проект лучше.", reply_markup=main_menu)
+    await message.answer("Спасибо! Отзыв получен 🙌\nВы помогаете сделать проект лучше.")
     await _notify_admin(
         f"💬 <b>Новый отзыв</b> от {_who(user.id, user.username)}\n\n{html.escape(text)}"
     )
@@ -241,21 +261,21 @@ async def cmd_start(message: Message) -> None:
     _track(message, "/start")
     await message.answer(
         f"Привет, {html.escape(user.first_name or 'друг')}! 👋\n\n{ABOUT_TEXT}",
-        reply_markup=main_menu,
+        reply_markup=ReplyKeyboardRemove(),
     )
 
 
 @dp.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
     _track(message, "/menu")
-    await message.answer(ABOUT_TEXT, reply_markup=main_menu)
+    await message.answer(MENU_TEXT, reply_markup=main_menu)
 
 
 @dp.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     _track(message, "/help")
     text = HELP_TEXT + (ADMIN_HELP_TEXT if _is_admin(message.from_user.id) else "")
-    await message.answer(text, reply_markup=main_menu)
+    await message.answer(text)
 
 
 @dp.message(Command("feedback"))
@@ -345,10 +365,37 @@ async def cmd_broadcast(message: Message, command: CommandObject) -> None:
 
 
 # --- Разделы ---
+@dp.message(F.text == CAREER_BUTTON)
+async def show_career(message: Message) -> None:
+    _track(message)
+    await message.answer(
+        "🚀 <b>Карьерный путь</b>\n\n"
+        "🛠 Раздел в разработке.\n"
+        "Мы работаем над ним и скоро его запустим.",
+        reply_markup=main_menu,
+    )
+
+
+@dp.message(F.text == INTELLECT_BUTTON)
+async def show_intellect(message: Message) -> None:
+    _track(message)
+    await message.answer(
+        "🧠 <b>Интеллект</b>\n\nВыберите направление 👇",
+        reply_markup=intellect_menu,
+    )
+
+
+@dp.message(F.text == BACK_BUTTON)
+async def back_to_menu(message: Message) -> None:
+    _track(message)
+    await message.answer(MENU_TEXT, reply_markup=main_menu)
+
+
 @dp.message(F.text.in_(TITLE_TO_KEY))
 async def show_section(message: Message) -> None:
     _track(message)
-    content = CONTENT[TITLE_TO_KEY[message.text]]
+    key = TITLE_TO_KEY[message.text]
+    content = CONTENT[key]
 
     lines = [f"<b>{content['title']}</b>", "", "📚 <b>Книги</b>"]
     for i, (title, url) in enumerate(content["books"], 1):
@@ -361,9 +408,11 @@ async def show_section(message: Message) -> None:
     search_url = "https://www.youtube.com/results?search_query=" + quote(content["search"])
     lines.append(f"🔎 {_link('Найти ещё на YouTube', search_url)}")
 
-    lines.append(f"\n{LINE}\nВыберите другой вектор или откройте /menu")
+    lines.append(f"\n{LINE}\nДругой раздел: /menu")
 
-    await message.answer("\n".join(lines), reply_markup=main_menu)
+    # Внутри «Интеллекта» остаёмся в его подменю, «Здоровье» возвращает в главное
+    keyboard = intellect_menu if key in INTELLECT_KEYS else main_menu
+    await message.answer("\n".join(lines), reply_markup=keyboard)
 
 
 # --- Всё остальное ---
@@ -376,8 +425,7 @@ async def other_text(message: Message) -> None:
 
     _track(message)
     await message.answer(
-        "Я не понял сообщение 😊\nВоспользуйтесь кнопками меню ниже:",
-        reply_markup=main_menu,
+        "Я не понял сообщение 😊\nОткройте /menu, чтобы выбрать раздел."
     )
 
 
