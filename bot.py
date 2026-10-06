@@ -1,454 +1,192 @@
+"""
+Telegram-бот «Шурик: путь стажёра»
+Запуск:
+    pip install -r requirements.txt
+    export BOT_TOKEN="токен_от_@BotFather"      # Windows: set BOT_TOKEN=...
+    python bot.py
+"""
 import asyncio
-import html
 import logging
 import os
-from urllib.parse import quote
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramAPIError
-from aiogram.filters import Command, CommandObject, CommandStart
+from aiogram.filters import CommandStart
 from aiogram.types import (
-    BotCommand,
-    ErrorEvent,
-    KeyboardButton,
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
     Message,
-    ReplyKeyboardMarkup,
-    ReplyKeyboardRemove,
-)
-from dotenv import load_dotenv
-
-from database import Database
-
-# Загружаем переменные окружения из .env
-load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
 )
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN не задан. Укажите его в файле .env")
+# ──────────────────────────── ТЕКСТЫ ────────────────────────────
 
-# Все сообщения бота отправляются в HTML-режиме, превью ссылок отключено.
-# Нужен aiogram >= 3.7:  pip install -U aiogram
-bot = Bot(
-    token=BOT_TOKEN,
-    default=DefaultBotProperties(
-        parse_mode=ParseMode.HTML,
-        link_preview_is_disabled=True,
-    ),
+START_TEXT = (
+    "👋 Здравствуйте! Меня зовут <b>Шурик</b>. Я студент, комсомолец и, "
+    "между прочим, просто красавец.\n\n"
+    "Я собрал конспект для тех, кто хочет начать карьеру со стажировки. "
+    "Нажмите кнопку ниже — расскажу, о чём этот бот."
 )
-dp = Dispatcher()
-db = Database()
-
-# Отзывы хранятся в той же таблице сообщений, с этим префиксом
-FEEDBACK_PREFIX = "[feedback] "
-MAX_FEEDBACK_LEN = 2000
-
-# ID пользователей, от которых бот ждёт следующее сообщение как отзыв
-AWAITING_FEEDBACK: set[int] = set()
-
-# --- Оформление ---
-LINE = "━━━━━━━━━━━━━━━━"
 
 ABOUT_TEXT = (
-    "◈ <b>РЕПЛИКАЦИЯ</b>  ·  <i>beta</i>\n"
-    "<i>Воспроизведи в себе то, что работает.</i>\n"
-    "\n"
-    "Проект, где знания, дисциплина и ясность мышления собраны в одном "
-    "месте: без шума, воды и лишних слов.\n"
-    f"\n{LINE}\n"
-    "<b>Три раздела</b>\n"
-    "\n"
-    "🚀  <b>Карьерный путь</b>\n"
-    "<i>в разработке</i>\n"
-    "\n"
-    "🧠  <b>Интеллект</b>\n"
-    "<i>история, психология общения и стоицизм: книги и лекции "
-    "для развития мышления</i>\n"
-    "\n"
-    "💪  <b>Здоровье</b>\n"
-    "<i>тело, энергия и восстановление: книги и лекции</i>\n"
-    f"\n{LINE}\n"
-    "🧪 <b>Бета-версия.</b> Бот развивается прямо сейчас. Нашли ошибку или "
-    "есть идея? Оставьте отзыв командой /feedback, это поможет сделать "
-    "проект лучше.\n"
-    "<i>В бета-режиме сообщения сохраняются для улучшения бота.</i>\n"
-    "\n"
-    "Чтобы открыть разделы, отправьте /menu 👇"
+    "📖 <b>О боте</b>\n\n"
+    "Я — Шурик, и я помогаю студентам и выпускникам пройти путь "
+    "от «ничего не умею» до «меня взяли на стажировку».\n\n"
+    "Здесь вы найдёте:\n"
+    "• список навыков, которые нужны для первой стажировки;\n"
+    "• ссылки на полезные ресурсы и площадки с вакансиями;\n"
+    "• компании, которые берут стажёров;\n"
+    "• а скоро — советы по росту, главные правила стажёра и "
+    "карьерные консультации.\n\n"
+    "Всё по-научному и без лишней воды. Выбирайте раздел 👇"
 )
 
-MENU_TEXT = "◈ <b>Главное меню</b>\n\nВыберите раздел 👇"
+MENU_TEXT = "📚 <b>Главное меню</b>\nВыберите раздел, коллега:"
 
-HELP_TEXT = (
-    "<b>Команды</b>\n\n"
-    "/start: начать сначала\n"
-    "/menu: главное меню\n"
-    "/feedback: оставить отзыв\n"
-    "/help: эта справка"
+FIRST_INTERNSHIP_TEXT = (
+    "🎯 <b>Как попасть на первую стажировку</b>\n\n"
+    "Шурик рекомендует действовать по плану — как перед сессией.\n\n"
+    "<b>🧠 Навыки, которые нужны</b>\n"
+    "• <b>Базовая профессиональная база</b> — по выбранному направлению "
+    "(программирование, аналитика, маркетинг, дизайн и т. д.)\n"
+    "• <b>Excel / Google Таблицы</b> — формулы, сводные таблицы\n"
+    "• <b>SQL и основы Python</b> — для аналитики и разработки\n"
+    "• <b>Git и GitHub</b> — для технических направлений\n"
+    "• <b>Английский</b> — хотя бы чтение документации (B1+)\n"
+    "• <b>Резюме и сопроводительное письмо</b> — на 1 страницу, по делу\n"
+    "• <b>Коммуникация</b> — умение задавать вопросы и признавать, "
+    "что чего-то не знаешь\n"
+    "• <b>Самообучение</b> — быстро разбираться в новом\n"
+    "• <b>Портфолио / пет-проекты</b> — 2–3 работы лучше, чем 10 курсов\n\n"
+    "<b>🔗 Где учиться и искать вакансии</b>\n"
+    '• <a href="https://career.habr.com/">Хабр Карьера</a>\n'
+    '• <a href="https://hh.ru/">hh.ru</a>\n'
+    '• <a href="https://www.linkedin.com/jobs/">LinkedIn Jobs</a>\n'
+    '• <a href="https://github.com/">GitHub</a> — для портфолио\n'
+    '• <a href="https://www.coursera.org/">Coursera</a> и '
+    '<a href="https://stepik.org/">Stepik</a> — для курсов\n\n'
+    "<b>🏢 Компании со стажировками</b>\n"
+    '• <a href="https://yandex.ru/yaintern/">Яндекс</a>\n'
+    '• <a href="https://education.tbank.ru/start/">Т-Банк (Тинькофф)</a>\n'
+    '• <a href="https://internship.vk.company/">VK</a>\n'
+    '• <a href="https://job.ozon.ru/">Ozon</a>\n'
+    '• <a href="https://careers.kaspersky.ru/">Лаборатория Касперского</a>\n'
+    '• <a href="https://www.jetbrains.com/careers/internships/">JetBrains</a>\n'
+    '• <a href="https://buildyourfuture.withgoogle.com/internships">Google</a>\n\n'
+    "💡 <i>Совет от Шурика: откликайтесь сразу в 15–20 мест. "
+    "Одного отказа — ещё не повод бросать науку.</i>"
 )
 
-ADMIN_HELP_TEXT = (
-    "\n\n<b>Для администратора</b>\n\n"
-    "/stats: статистика\n"
-    "/feedbacks: последние отзывы\n"
-    "/broadcast &lt;текст&gt;: рассылка всем пользователям"
+GROW_TEXT = (
+    "📈 <b>Как расти дальше?</b>\n\n"
+    "⏳ Раздел ещё в разработке. Шурик пока дописывает конспект — "
+    "скоро будет доступен!"
 )
 
-# --- Контент по векторам развития ---
-CONTENT = {
-    "history": {
-        "title": "🌍 История",
-        "books": [
-            ("«Sapiens. Краткая история человечества» — Юваль Ной Харари", "https://www.litres.ru/uval-noy-harari/sapiens-kratkaya-istoriya-chelovechestva/"),
-            ("«История цивилизаций» — Арнольд Тойнби", "https://www.litres.ru/arnold-toynbi/istoriya-civilizaciy/"),
-            ("«Война и мир» — Лев Толстой (исторический контекст)", "https://www.litres.ru/lev-tolstoy/voyna-i-mir/"),
-        ],
-        "lectures": [
-            ("Новейшее время (XX–XXI века): видеокурс по всемирной истории", "https://www.youtube.com/playlist?list=PLv6ufBUWdRi3l45hk16CfXuJI1BBNZBke"),
-            ("История России: полный курс лекций, проф. Николай Борисов", "https://www.youtube.com/playlist?list=PLgctnI88vkPkgO2rR5ywYkhkpdtJVCS72"),
-            ("История культуры: цикл из 18 лекций", "https://www.youtube.com/playlist?list=PLUIs7NG0TxfOhhx4oBDz-GY8UWyAe2xkz"),
-        ],
-        "search": "история мира лекция",
-    },
-    "psychology": {
-        "title": "🧠 Психология общения",
-        "books": [
-            ("«Как завоёвывать друзей и оказывать влияние на людей» — Дейл Карнеги", "https://www.litres.ru/deyl-karnegi/kak-zavoevyvat-druzey-i-okazyvat-vliyanie-na-ludey/"),
-            ("«Язык телодвижений» — Аллан Пиз", "https://www.litres.ru/allan-piz/yazyk-telodvizheniy/"),
-            ("«Тонкое искусство пофигизма» — Марк Мэнсон", "https://www.litres.ru/mark-menson/tonkoe-iskusstvo-pofigizma/"),
-        ],
-        "lectures": [
-            ("Г. М. Андреева: «Коммуникативная сторона общения» (МГУ)", "https://www.youtube.com/watch?v=4FRl3wS4Ed0"),
-            ("Секреты невербального общения: разбор на примерах телеведущих", "https://www.youtube.com/watch?v=FL1XPdQhq_M"),
-            ("Роберт Сапольски: «Биология поведения человека» (Стэнфорд, 25 лекций)", "https://www.youtube.com/playlist?list=PLGeXwa8swXj1AD8QsEnWqqMNaJjwmltmV"),
-        ],
-        "search": "психология общения лекция",
-    },
-    "health": {
-        "title": "💪 Здоровье",
-        "books": [
-            ("«Анатомия силовых упражнений» — Фредерик Делавье", "https://www.litres.ru/frederik-delave/anatomiya-silovyh-uprazhneniy/"),
-            ("«Стройность и сила» — руководство по фитнесу", "https://www.litres.ru/"),
-            ("«Питание для набора мышечной массы» — гайд", "https://www.litres.ru/"),
-        ],
-        "lectures": [
-            ("Вячеслав Дубынин: «Мышцы и движения»", "https://www.youtube.com/watch?v=oCfs_KXwQJQ"),
-            ("Вячеслав Дубынин: «Обмен веществ, витамины»", "https://www.youtube.com/watch?v=VFnTG9qFPfM"),
-            ("Вячеслав Дубынин: «Мозг и сон»", "https://www.youtube.com/watch?v=Zdy9wy8N8Lo"),
-        ],
-        "search": "здоровье физиология лекция",
-    },
-    "stoicism": {
-        "title": "🏛️ Стоический образ жизни",
-        "books": [
-            ("«Размышления» — Марк Аврелий", "https://www.litres.ru/mark-avreliy/razmyshleniya/"),
-            ("«Письма к Луцилию» — Сенека", "https://www.litres.ru/luciy-anney-seneka/pisma-k-luciliu/"),
-            ("«Энхиридион» — Эпиктет", "https://www.litres.ru/epiktet/enhiridion/"),
-        ],
-        "lectures": [
-            ("Истоки философского мышления 14/14: Сенека, Эпиктет, Марк Аврелий", "https://www.youtube.com/watch?v=zvX_i-gxtcM"),
-            ("Александр Саликов: как связаны Сенека, Эпиктет и Марк Аврелий", "https://www.youtube.com/watch?v=0AqM3z8aSv8"),
-            ("Ментальная модель стоиков: Марк Аврелий, Сенека и Эпиктет", "https://www.youtube.com/watch?v=h1rlAFFVs9w"),
-        ],
-        "search": "стоицизм лекция",
-    },
-}
-
-# Название кнопки -> ключ раздела (кнопки строятся из CONTENT, поэтому всегда совпадают)
-TITLE_TO_KEY = {data["title"]: key for key, data in CONTENT.items()}
-
-CAREER_BUTTON = "🚀 Карьерный путь"
-INTELLECT_BUTTON = "🧠 Интеллект"
-HEALTH_BUTTON = CONTENT["health"]["title"]
-FEEDBACK_BUTTON = "💬 Отзыв"
-BACK_BUTTON = "⬅️ Назад в меню"
-
-# Какие разделы входят в «Интеллект»
-INTELLECT_KEYS = ("history", "psychology", "stoicism")
-
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text=CAREER_BUTTON)],
-        [KeyboardButton(text=INTELLECT_BUTTON)],
-        [KeyboardButton(text=HEALTH_BUTTON)],
-        [KeyboardButton(text=FEEDBACK_BUTTON)],
-    ],
-    resize_keyboard=True,
+MAIN_TEXT = (
+    "⭐ <b>Что самое главное в работе стажёра?</b>\n\n"
+    "⏳ Раздел ещё в разработке. Шурик пока дописывает конспект — "
+    "скоро будет доступен!"
 )
 
-intellect_menu = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text=CONTENT[key]["title"])] for key in INTELLECT_KEYS]
-    + [[KeyboardButton(text=BACK_BUTTON)]],
-    resize_keyboard=True,
+CONSULT_TEXT = (
+    "🗓 <b>Карьерная консультация</b>\n\n"
+    "⏳ Запись пока не открыта. Шурик договаривается с наставниками — "
+    "скоро запись будет доступна!"
 )
 
-
-# --- Вспомогательные функции ---
-def _is_admin(user_id: int) -> bool:
-    return bool(ADMIN_ID) and str(user_id) == str(ADMIN_ID)
+# ──────────────────────────── КЛАВИАТУРЫ ────────────────────────────
 
 
-def _track(message: Message, text: str | None = None) -> None:
-    """Сохраняет входящее сообщение и сбрасывает режим «жду отзыв»."""
-    user = message.from_user
-    db.save_message(user.id, user.username, text if text is not None else (message.text or ""))
-    AWAITING_FEEDBACK.discard(user.id)
-
-
-def _link(title: str, url: str) -> str:
-    return f'<a href="{html.escape(url, quote=True)}">{html.escape(title)}</a>'
-
-
-def _who(user_id, username) -> str:
-    return f"@{html.escape(username)}" if username else str(user_id)
-
-
-async def _send_long(message: Message, text: str) -> None:
-    """Отправляет длинный текст частями (лимит Telegram: 4096 символов)."""
-    chunk = ""
-    for line in text.split("\n"):
-        if len(chunk) + len(line) + 1 > 3800:
-            await message.answer(chunk)
-            chunk = ""
-        chunk += line + "\n"
-    if chunk.strip():
-        await message.answer(chunk)
-
-
-async def _notify_admin(text: str) -> None:
-    if not ADMIN_ID:
-        return
-    try:
-        await bot.send_message(int(ADMIN_ID), text)
-    except (TelegramAPIError, ValueError):
-        logging.warning("Не удалось отправить уведомление администратору")
-
-
-async def _save_feedback(message: Message, text: str) -> None:
-    user = message.from_user
-    text = text.strip()[:MAX_FEEDBACK_LEN]
-    db.save_message(user.id, user.username, f"{FEEDBACK_PREFIX}{text}")
-    AWAITING_FEEDBACK.discard(user.id)
-
-    await message.answer("Спасибо! Отзыв получен 🙌\nВы помогаете сделать проект лучше.")
-    await _notify_admin(
-        f"💬 <b>Новый отзыв</b> от {_who(user.id, user.username)}\n\n{html.escape(text)}"
+def start_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="ℹ️ Что это за бот?", callback_data="about")]
+        ]
     )
 
 
-async def _ask_feedback(message: Message) -> None:
-    AWAITING_FEEDBACK.add(message.from_user.id)
-    await message.answer(
-        "💬 <b>Отзыв</b>\n\n"
-        "Напишите одним сообщением: что понравилось, что сломалось "
-        "или чего не хватает.\n"
-        "<i>Чтобы отменить, просто выберите любой пункт меню.</i>"
+def menu_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🎯 Как попасть на первую стажировку", callback_data="first")],
+            [InlineKeyboardButton(text="📈 Как расти дальше?", callback_data="grow")],
+            [InlineKeyboardButton(text="⭐ Что самое главное в работе стажёра?", callback_data="main")],
+            [InlineKeyboardButton(text="🗓 Карьерная консультация", callback_data="consult")],
+        ]
     )
 
 
-# --- Команды ---
+def about_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="📚 Перейти в меню", callback_data="menu")]
+        ]
+    )
+
+
+def back_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="menu")]
+        ]
+    )
+
+
+# ──────────────────────────── ХЕНДЛЕРЫ ────────────────────────────
+
+dp = Dispatcher()
+
+
+async def show(call: CallbackQuery, text: str, kb: InlineKeyboardMarkup) -> None:
+    """Редактирует текущее сообщение (без спама новыми)."""
+    await call.message.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+    await call.answer()
+
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    user = message.from_user
-    db.register_user(user.id, user.username, user.first_name, user.last_name)
-    _track(message, "/start")
-    await message.answer(
-        f"Привет, {html.escape(user.first_name or 'друг')}! 👋\n\n{ABOUT_TEXT}",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    await message.answer(START_TEXT, reply_markup=start_kb())
 
 
-@dp.message(Command("menu"))
-async def cmd_menu(message: Message) -> None:
-    _track(message, "/menu")
-    await message.answer(MENU_TEXT, reply_markup=main_menu)
+@dp.callback_query(F.data == "about")
+async def cb_about(call: CallbackQuery) -> None:
+    await show(call, ABOUT_TEXT, about_kb())
 
 
-@dp.message(Command("help"))
-async def cmd_help(message: Message) -> None:
-    _track(message, "/help")
-    text = HELP_TEXT + (ADMIN_HELP_TEXT if _is_admin(message.from_user.id) else "")
-    await message.answer(text)
+@dp.callback_query(F.data == "menu")
+async def cb_menu(call: CallbackQuery) -> None:
+    await show(call, MENU_TEXT, menu_kb())
 
 
-@dp.message(Command("feedback"))
-async def cmd_feedback(message: Message, command: CommandObject) -> None:
-    if command.args:
-        await _save_feedback(message, command.args)
-    else:
-        _track(message, "/feedback")
-        await _ask_feedback(message)
+@dp.callback_query(F.data == "first")
+async def cb_first(call: CallbackQuery) -> None:
+    await show(call, FIRST_INTERNSHIP_TEXT, back_kb())
 
 
-@dp.message(F.text == FEEDBACK_BUTTON)
-async def btn_feedback(message: Message) -> None:
-    _track(message)
-    await _ask_feedback(message)
+@dp.callback_query(F.data == "grow")
+async def cb_grow(call: CallbackQuery) -> None:
+    await show(call, GROW_TEXT, back_kb())
 
 
-# --- Команды администратора ---
-@dp.message(Command("stats"))
-async def cmd_stats(message: Message) -> None:
-    _track(message, "/stats")
-    if not _is_admin(message.from_user.id):
-        await message.answer("⛔ У вас нет доступа к статистике.")
-        return
-
-    users = db.get_all_users()
-    messages = db.get_all_messages()
-    unique_count = db.get_unique_users_count()
-    feedback_count = sum(1 for m in messages if str(m["text"]).startswith(FEEDBACK_PREFIX))
-
-    last_users = "\n".join(
-        f"• {u['user_id']} | {_who(u['user_id'], u['username'])} | "
-        f"{html.escape(u['first_name'] or '')}"
-        for u in users[-10:]
-    ) or "Нет пользователей"
-
-    await _send_long(
-        message,
-        "📊 <b>Статистика</b>\n\n"
-        f"👥 Уникальных пользователей: <b>{unique_count}</b>\n"
-        f"✉️ Всего сообщений: <b>{len(messages)}</b>\n"
-        f"💬 Отзывов: <b>{feedback_count}</b>\n\n"
-        f"<b>Последние пользователи:</b>\n{last_users}",
-    )
+@dp.callback_query(F.data == "main")
+async def cb_main(call: CallbackQuery) -> None:
+    await show(call, MAIN_TEXT, back_kb())
 
 
-@dp.message(Command("feedbacks"))
-async def cmd_feedbacks(message: Message) -> None:
-    _track(message, "/feedbacks")
-    if not _is_admin(message.from_user.id):
-        await message.answer("⛔ У вас нет доступа.")
-        return
-
-    items = [m for m in db.get_all_messages() if str(m["text"]).startswith(FEEDBACK_PREFIX)]
-    if not items:
-        await message.answer("Отзывов пока нет.")
-        return
-
-    lines = ["💬 <b>Последние отзывы</b>\n"]
-    for m in items[-15:]:
-        text = html.escape(str(m["text"])[len(FEEDBACK_PREFIX):])
-        lines.append(f"• {_who(m['user_id'], m['username'])}: {text}\n")
-    await _send_long(message, "\n".join(lines))
-
-
-@dp.message(Command("broadcast"))
-async def cmd_broadcast(message: Message, command: CommandObject) -> None:
-    _track(message, "/broadcast")
-    if not _is_admin(message.from_user.id):
-        await message.answer("⛔ У вас нет доступа.")
-        return
-    if not command.args:
-        await message.answer("Использование: /broadcast текст рассылки")
-        return
-
-    users = db.get_all_users()
-    ok = fail = 0
-    for u in users:
-        try:
-            await bot.send_message(u["user_id"], command.args)
-            ok += 1
-        except TelegramAPIError:
-            fail += 1  # пользователь заблокировал бота или недоступен
-        await asyncio.sleep(0.05)  # не упираемся в лимиты Telegram
-
-    await message.answer(f"✅ Рассылка завершена\nДоставлено: {ok}\nНе доставлено: {fail}")
-
-
-# --- Разделы ---
-@dp.message(F.text == CAREER_BUTTON)
-async def show_career(message: Message) -> None:
-    _track(message)
-    await message.answer(
-        "🚀 <b>Карьерный путь</b>\n\n"
-        "🛠 Раздел в разработке.\n"
-        "Мы работаем над ним и скоро его запустим.",
-        reply_markup=main_menu,
-    )
-
-
-@dp.message(F.text == INTELLECT_BUTTON)
-async def show_intellect(message: Message) -> None:
-    _track(message)
-    await message.answer(
-        "🧠 <b>Интеллект</b>\n\nВыберите направление 👇",
-        reply_markup=intellect_menu,
-    )
-
-
-@dp.message(F.text == BACK_BUTTON)
-async def back_to_menu(message: Message) -> None:
-    _track(message)
-    await message.answer(MENU_TEXT, reply_markup=main_menu)
-
-
-@dp.message(F.text.in_(TITLE_TO_KEY))
-async def show_section(message: Message) -> None:
-    _track(message)
-    key = TITLE_TO_KEY[message.text]
-    content = CONTENT[key]
-
-    lines = [f"<b>{content['title']}</b>", "", "📚 <b>Книги</b>"]
-    for i, (title, url) in enumerate(content["books"], 1):
-        lines.append(f"{i}. {_link(title, url)}")
-
-    lines += ["", "🎬 <b>Лекции на YouTube</b>"]
-    for i, (title, url) in enumerate(content["lectures"], 1):
-        lines.append(f"{i}. {_link(title, url)}")
-
-    search_url = "https://www.youtube.com/results?search_query=" + quote(content["search"])
-    lines.append(f"🔎 {_link('Найти ещё на YouTube', search_url)}")
-
-    lines.append(f"\n{LINE}\nДругой раздел: /menu")
-
-    # Внутри «Интеллекта» остаёмся в его подменю, «Здоровье» возвращает в главное
-    keyboard = intellect_menu if key in INTELLECT_KEYS else main_menu
-    await message.answer("\n".join(lines), reply_markup=keyboard)
-
-
-# --- Всё остальное ---
-@dp.message(F.text)
-async def other_text(message: Message) -> None:
-    user = message.from_user
-    if user.id in AWAITING_FEEDBACK:
-        await _save_feedback(message, message.text)
-        return
-
-    _track(message)
-    await message.answer(
-        "Я не понял сообщение 😊\nОткройте /menu, чтобы выбрать раздел."
-    )
-
-
-# --- Глобальный обработчик ошибок ---
-@dp.errors()
-async def on_error(event: ErrorEvent) -> bool:
-    logging.exception("Ошибка при обработке апдейта", exc_info=event.exception)
-    await _notify_admin(
-        f"⚠️ <b>Ошибка в боте</b>\n<code>{html.escape(repr(event.exception)[:500])}</code>"
-    )
-    return True
+@dp.callback_query(F.data == "consult")
+async def cb_consult(call: CallbackQuery) -> None:
+    await show(call, CONSULT_TEXT, back_kb())
 
 
 async def main() -> None:
-    await bot.set_my_commands(
-        [
-            BotCommand(command="start", description="Начать сначала"),
-            BotCommand(command="menu", description="Главное меню"),
-            BotCommand(command="feedback", description="Оставить отзыв"),
-            BotCommand(command="help", description="Справка"),
-        ]
-    )
-    logging.info("Бот запущен (beta)")
+    if not BOT_TOKEN:
+        raise SystemExit("Задайте переменную окружения BOT_TOKEN")
+    logging.basicConfig(level=logging.INFO)
+    bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
 
