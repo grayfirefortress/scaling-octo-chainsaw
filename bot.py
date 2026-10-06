@@ -28,7 +28,9 @@ from aiogram.types import (
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 # Telegram ID админов через запятую: export ADMIN_IDS="123456789,987654321"
 # (свой ID можно узнать у бота @userinfobot)
-ADMIN_ID = os.getenv("ADMIN_ID", "")
+ADMIN_IDS = {
+    int(x) for x in os.getenv("ADMIN_IDS", "").replace(" ", "").split(",") if x.isdigit()
+}
 DB_PATH = Path(__file__).parent / "users.db"
 
 # Картинки лежат в папке images рядом с bot.py
@@ -65,8 +67,9 @@ FIRST_INTERNSHIP_TEXT = (
     "<b>🧠 Навыки, которые нужны</b>\n"
     "• <b>Базовая профессиональная база</b> — по выбранному направлению "
     "(программирование, аналитика, маркетинг, дизайн и т. д.)\n"
-    "• <b>Excel / Google Таблицы</b> — формулы, сводные таблицы\n"
-    "• <b>SQL и основы Python</b> — для аналитики и разработки\n"
+    "• <b>Python</b> — синтаксис, функции, работа с файлами и библиотеками\n"
+    "• <b>Linux</b> — терминал, файловая система, bash, права доступа\n"
+    "• <b>Базы данных</b> — реляционная модель, SQL-запросы, JOIN\n"
     "• <b>Git и GitHub</b> — для технических направлений\n"
     "• <b>Английский</b> — хотя бы чтение документации (B1+)\n"
     "• <b>Резюме и сопроводительное письмо</b> — на 1 страницу, по делу\n"
@@ -81,6 +84,16 @@ FIRST_INTERNSHIP_TEXT = (
     '• <a href="https://github.com/">GitHub</a> — для портфолио\n'
     '• <a href="https://www.coursera.org/">Coursera</a> и '
     '<a href="https://stepik.org/">Stepik</a> — для курсов\n\n'
+    "<b>🎥 Видео по темам</b>\n"
+    "<i>Python</i>\n"
+    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFXgfuxOEDTCwsWmKezOaDTu">Плейлист: Python для начинающих</a>\n'
+    '• <a href="https://www.youtube.com/watch?v=P2Spqz_CXM8">Полный курс Python в одном видео</a>\n'
+    "<i>Linux</i>\n"
+    '• <a href="https://www.youtube.com/playlist?list=PLg5SS_4L6LYuE4z-3BgLYGkZrs-cF4Tep">Плейлист: Linux для начинающих</a>\n'
+    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFUwVWvVitxG2oXA6a-Nq-Qq">Linux Ubuntu и Bash с нуля</a>\n'
+    "<i>Базы данных</i>\n"
+    '• <a href="https://www.youtube.com/watch?v=IK6e1SFCdow">SQL для начинающих: SELECT, JOIN, GROUP BY (MySQL)</a>\n'
+    '• <a href="https://www.youtube.com/watch?v=HVQNxdI6fqY">Практический курс SQL: PostgreSQL</a>\n\n'
     "<b>🏢 Компании со стажировками</b>\n"
     '• <a href="https://yandex.ru/yaintern/">Яндекс</a>\n'
     '• <a href="https://education.tbank.ru/start/">Т-Банк (Тинькофф)</a>\n'
@@ -286,7 +299,7 @@ async def cb_consult(call: CallbackQuery) -> None:
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message) -> None:
     """Статистика для админа: кто заходил в бота."""
-    if message.from_user.id not in (ADMIN_ID):
+    if message.from_user.id not in ADMIN_IDS:
         return  # для обычных пользователей команды как будто нет
 
     st = get_stats()
@@ -330,7 +343,7 @@ async def main() -> None:
     db_init()
     dp.message.outer_middleware(TrackUsersMiddleware())
     dp.callback_query.outer_middleware(TrackUsersMiddleware())
-    if not ADMIN_ID:
+    if not ADMIN_IDS:
         logging.warning("ADMIN_IDS не задан — команда /stats никому не доступна")
     bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
