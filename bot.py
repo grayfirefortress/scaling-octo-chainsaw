@@ -8,6 +8,7 @@ Telegram-бот «Шурик: путь стажёра»
 import asyncio
 import logging
 import os
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -15,12 +16,18 @@ from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import (
     CallbackQuery,
+    FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     Message,
 )
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+
+# Картинки лежат в папке images рядом с bot.py
+IMG_DIR = Path(__file__).parent / "images"
+WELCOME_IMG = IMG_DIR / "welcome-msg.png"
+NOT_FOUND_IMG = IMG_DIR / "not_found.png"
 
 # ──────────────────────────── ТЕКСТЫ ────────────────────────────
 
@@ -141,15 +148,35 @@ def back_kb() -> InlineKeyboardMarkup:
 dp = Dispatcher()
 
 
-async def show(call: CallbackQuery, text: str, kb: InlineKeyboardMarkup) -> None:
-    """Редактирует текущее сообщение (без спама новыми)."""
-    await call.message.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+async def show(
+    call: CallbackQuery,
+    text: str,
+    kb: InlineKeyboardMarkup,
+    photo: Path | None = None,
+) -> None:
+    """
+    Показывает экран. Если картинки нет и текущее сообщение текстовое —
+    просто редактирует его. Если нужна картинка (или текущее сообщение
+    с картинкой) — Telegram не умеет превращать текст в фото и обратно,
+    поэтому старое сообщение удаляется и отправляется новое.
+    """
+    msg = call.message
+    if photo is None and not msg.photo:
+        await msg.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+    else:
+        await msg.delete()
+        if photo:
+            await msg.answer_photo(FSInputFile(photo), caption=text, reply_markup=kb)
+        else:
+            await msg.answer(text, reply_markup=kb, disable_web_page_preview=True)
     await call.answer()
 
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    await message.answer(START_TEXT, reply_markup=start_kb())
+    await message.answer_photo(
+        FSInputFile(WELCOME_IMG), caption=START_TEXT, reply_markup=start_kb()
+    )
 
 
 @dp.callback_query(F.data == "about")
@@ -169,17 +196,17 @@ async def cb_first(call: CallbackQuery) -> None:
 
 @dp.callback_query(F.data == "grow")
 async def cb_grow(call: CallbackQuery) -> None:
-    await show(call, GROW_TEXT, back_kb())
+    await show(call, GROW_TEXT, back_kb(), photo=NOT_FOUND_IMG)
 
 
 @dp.callback_query(F.data == "main")
 async def cb_main(call: CallbackQuery) -> None:
-    await show(call, MAIN_TEXT, back_kb())
+    await show(call, MAIN_TEXT, back_kb(), photo=NOT_FOUND_IMG)
 
 
 @dp.callback_query(F.data == "consult")
 async def cb_consult(call: CallbackQuery) -> None:
-    await show(call, CONSULT_TEXT, back_kb())
+    await show(call, CONSULT_TEXT, back_kb(), photo=NOT_FOUND_IMG)
 
 
 async def main() -> None:
