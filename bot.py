@@ -6,14 +6,17 @@ Telegram-бот «Шурик: путь стажёра»
     python bot.py
 """
 import asyncio
+import html
 import logging
 import os
+import sqlite3
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import BaseMiddleware, Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     CallbackQuery,
     FSInputFile,
@@ -23,6 +26,10 @@ from aiogram.types import (
 )
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+# Telegram ID админов через запятую: export ADMIN_IDS="123456789,987654321"
+# (свой ID можно узнать у бота @userinfobot)
+ADMIN_ID = os.getenv("ADMIN_ID", "")
+DB_PATH = Path(__file__).parent / "users.db"
 
 # Картинки лежат в папке images рядом с bot.py
 IMG_DIR = Path(__file__).parent / "images"
@@ -32,10 +39,9 @@ NOT_FOUND_IMG = IMG_DIR / "not_found.png"
 # ──────────────────────────── ТЕКСТЫ ────────────────────────────
 
 START_TEXT = (
-    "👋 Здравствуйте! Меня зовут <b>Шурик</b>. Я студент, комсомолец и, "
-    "между прочим, просто красавец.\n\n"
-    "Я собрал конспект для тех, кто хочет начать карьеру со стажировки. "
-    "Нажмите кнопку ниже — расскажу, о чём этот бот."
+    "👋 Привет, {name}! Я Шурик, и я помогу тебе стать настоящим инженером!\n\n"
+    "Я собрал пару полезных советов, которые помогут тебе начать карьеру "
+    "со стажировки. Нажми кнопку ниже — расскажу, о чём этот бот."
 )
 
 ABOUT_TEXT = (
@@ -143,6 +149,72 @@ def back_kb() -> InlineKeyboardMarkup:
     )
 
 
+# ──────────────────────────── БАЗА ПОЛЬЗОВАТЕЛЕЙ ────────────────────────────
+
+
+def db_connect() -> sqlite3.Connection:
+    return sqlite3.connect(DB_PATH)
+
+
+def db_init() -> None:
+    with db_connect() as con:
+        con.execute(
+            """CREATE TABLE IF NOT EXISTS users (
+                   user_id    INTEGER PRIMARY KEY,
+                   username   TEXT,
+                   full_name  TEXT,
+                   first_seen TEXT NOT NULL,
+                   last_seen  TEXT NOT NULL,
+                   actions    INTEGER NOT NULL DEFAULT 1
+               )"""
+        )
+
+
+def touch_user(user_id: int, username: str | None, full_name: str) -> None:
+    """Записывает нового пользователя или обновляет существующего."""
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with db_connect() as con:
+        con.execute(
+            """INSERT INTO users (user_id, username, full_name, first_seen, last_seen)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                   username  = excluded.username,
+                   full_name = excluded.full_name,
+                   last_seen = excluded.last_seen,
+                   actions   = actions + 1""",
+            (user_id, username, full_name, now, now),
+        )
+
+
+def get_stats() -> dict:
+    now = datetime.now(timezone.utc)
+    day_ago = (now - timedelta(days=1)).isoformat(timespec="seconds")
+    week_ago = (now - timedelta(days=7)).isoformat(timespec="seconds")
+    with db_connect() as con:
+        total = con.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        new_24h = con.execute(
+            "SELECT COUNT(*) FROM users WHERE first_seen >= ?", (day_ago,)
+        ).fetchone()[0]
+        active_7d = con.execute(
+            "SELECT COUNT(*) FROM users WHERE last_seen >= ?", (week_ago,)
+        ).fetchone()[0]
+        rows = con.execute(
+            "SELECT user_id, username, full_name, last_seen FROM users "
+            "ORDER BY last_seen DESC"
+        ).fetchall()
+    return {"total": total, "new_24h": new_24h, "active_7d": active_7d, "rows": rows}
+
+
+class TrackUsersMiddleware(BaseMiddleware):
+    """Запоминает каждого, кто взаимодействует с ботом."""
+
+    async def __call__(self, handler, event, data):
+        user = data.get("event_from_user")
+        if user and not user.is_bot:
+            touch_user(user.id, user.username, user.full_name)
+        return await handler(event, data)
+
+
 # ──────────────────────────── ХЕНДЛЕРЫ ────────────────────────────
 
 dp = Dispatcher()
@@ -175,7 +247,9 @@ async def show(
 @dp.message(CommandStart())
 async def cmd_start(message: Message) -> None:
     await message.answer_photo(
-        FSInputFile(WELCOME_IMG), caption=START_TEXT, reply_markup=start_kb()
+        FSInputFile(WELCOME_IMG),
+        caption=START_TEXT.format(name=html.escape(message.from_user.first_name or "друг")),
+        reply_markup=start_kb(),
     )
 
 
@@ -209,10 +283,55 @@ async def cb_consult(call: CallbackQuery) -> None:
     await show(call, CONSULT_TEXT, back_kb(), photo=NOT_FOUND_IMG)
 
 
+@dp.message(Command("stats"))
+async def cmd_stats(message: Message) -> None:
+    """Статистика для админа: кто заходил в бота."""
+    if message.from_user.id == ADMIN_ID:
+        return  # для обычных пользователей команды как будто нет
+
+    st = get_stats()
+    header = (
+        "📊 <b>Статистика бота</b>\n\n"
+        f"👥 Всего пользователей: <b>{st['total']}</b>\n"
+        f"🆕 Новых за 24 часа: <b>{st['new_24h']}</b>\n"
+        f"🔥 Активных за 7 дней: <b>{st['active_7d']}</b>\n\n"
+        "<b>Кто заходил</b> (по последнему визиту, время UTC):\n"
+    )
+
+    lines = []
+    for i, (uid, username, full_name, last_seen) in enumerate(st["rows"], 1):
+        if username:
+            who = f"@{html.escape(username)}"
+        else:
+            who = f"без ника, {html.escape(full_name or '—')} (id {uid})"
+        lines.append(f"{i}. {who} — {last_seen[:16].replace('T', ' ')}")
+
+    if not lines:
+        await message.answer(header + "пока никого.")
+        return
+
+    # Лимит Telegram — 4096 символов, поэтому режем список на части
+    chunks, current = [], header
+    for line in lines:
+        if len(current) + len(line) + 1 > 3800:
+            chunks.append(current)
+            current = ""
+        current += line + "\n"
+    chunks.append(current)
+
+    for chunk in chunks:
+        await message.answer(chunk)
+
+
 async def main() -> None:
     if not BOT_TOKEN:
         raise SystemExit("Задайте переменную окружения BOT_TOKEN")
     logging.basicConfig(level=logging.INFO)
+    db_init()
+    dp.message.outer_middleware(TrackUsersMiddleware())
+    dp.callback_query.outer_middleware(TrackUsersMiddleware())
+    if not ADMIN_ID:
+        logging.warning("ADMIN_IDS не задан — команда /stats никому не доступна")
     bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     await dp.start_polling(bot)
 
