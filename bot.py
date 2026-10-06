@@ -286,7 +286,7 @@ async def cb_consult(call: CallbackQuery) -> None:
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message) -> None:
     """Статистика для админа: кто заходил в бота."""
-    if message.from_user.id == ADMIN_ID:
+    if message.from_user.id not in (ADMIN_ID):
         return  # для обычных пользователей команды как будто нет
 
     st = get_stats()
