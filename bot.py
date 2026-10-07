@@ -34,59 +34,50 @@ NOT_FOUND_IMG = IMG_DIR / "not_found.png"
 # ──────────────────────────── ТЕКСТЫ ────────────────────────────
 
 START_TEXT = (
-    "👋 Привет, {name}!Я помогу тебе стать настоящим инженером в крупной айти компании!\n\n"
+    "👋 Привет, {name}! Я помогу тебе стать настоящим инженером в крупной айти компании!\n\n"
     "Я собрал пару полезных советов, которые помогут тебе начать карьеру "
     "со стажировки. Нажми кнопку ниже — расскажу."
 )
 
 ABOUT_TEXT = (
-    "📖 <b>О боте</b>\n\n"
-    "Я помогаю студентам и выпускникам пройти путь "
-    "от «я не знаю с чего начать» до «меня взяли на стажировку».\n\n"
+    "📖 <b>О проекте 'как пройти в библиотеку?'</b>\n\n"
+    "Мы помогаем студентам и выпускникам попасть на первую it стажировку."
+    "Проект растет с каждым днем и будет дополняться новыми материалами.\n\n"
     "Здесь вы найдёте:\n"
     "• список навыков, которые нужны для первой стажировки;\n"
     "• ссылки на полезные ресурсы и площадки с вакансиями;\n"
     "• компании, которые берут стажёров;\n"
-    "• а скоро — советы по росту, главные правила стажёра и "
-    "карьерные консультации.\n\n"
-    "Без лишней воды и БЕСПЛАТНО. Выбирайте раздел 👇"
+    "• карьерные консультации.\n\n"
+    "Без лишней воды и <b>БЕСПЛАТНО</b>. Выбирайте раздел 👇"
 )
 
 MENU_TEXT = "📚 <b>Главное меню</b>\nВыбери раздел студент:"
 
-FIRST_INTERNSHIP_TEXT = (
+DIRECTIONS_TEXT = (
     "🎯 <b>как попасть на первую стажировку</b>\n\n"
-    "Я рекомендую действовать по плану — как перед сессией.\n\n"
-    "<b>🧠 Навыки, которые нужны</b>\n"
-    "• <b>Базовая профессиональная база</b> — по выбранному направлению "
-    "(программирование, аналитика, маркетинг, дизайн и т. д.)\n"
-    "• <b>Python</b> — синтаксис, функции, работа с файлами и библиотеками\n"
-    "• <b>Linux</b> — терминал, файловая система, bash, права доступа\n"
-    "• <b>Базы данных</b> — реляционная модель, SQL-запросы, JOIN\n"
-    "• <b>Git и GitHub</b> — для технических направлений\n"
+    "Набор навыков зависит от направления. Выбери, куда хочешь пойти 👇"
+)
+
+# ── Общие блоки, которые повторяются во всех направлениях ──
+
+COMMON_SKILLS = (
     "• <b>Английский</b> — хотя бы чтение документации (B1+)\n"
     "• <b>Резюме и сопроводительное письмо</b> — на 1 страницу, по делу\n"
     "• <b>Коммуникация</b> — умение задавать вопросы и признавать, "
     "что чего-то не знаешь\n"
     "• <b>Самообучение</b> — быстро разбираться в новом\n"
     "• <b>Портфолио / пет-проекты</b> — 2–3 работы лучше, чем 10 курсов\n\n"
-    "<b>🔗 Где учиться и искать вакансии</b>\n"
+)
+
+COMMON_JOBS = (
+    "<b>🔍 Где искать вакансии</b>\n"
     '• <a href="https://career.habr.com/">Хабр Карьера</a>\n'
     '• <a href="https://hh.ru/">hh.ru</a>\n'
     '• <a href="https://www.linkedin.com/jobs/">LinkedIn Jobs</a>\n'
-    '• <a href="https://github.com/">GitHub</a> — для портфолио\n'
-    '• <a href="https://www.coursera.org/">Coursera</a> и '
-    '<a href="https://stepik.org/">Stepik</a> — для курсов\n\n'
-    "<b>🎥 Видео по темам</b>\n"
-    "<i>Python</i>\n"
-    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFXgfuxOEDTCwsWmKezOaDTu">Плейлист: Python для начинающих</a>\n'
-    '• <a href="https://www.youtube.com/watch?v=P2Spqz_CXM8">Полный курс Python в одном видео</a>\n'
-    "<i>Linux</i>\n"
-    '• <a href="https://www.youtube.com/playlist?list=PLg5SS_4L6LYuE4z-3BgLYGkZrs-cF4Tep">Плейлист: Linux для начинающих</a>\n'
-    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFUwVWvVitxG2oXA6a-Nq-Qq">Linux Ubuntu и Bash с нуля</a>\n'
-    "<i>Базы данных</i>\n"
-    '• <a href="https://www.youtube.com/watch?v=IK6e1SFCdow">SQL для начинающих: SELECT, JOIN, GROUP BY (MySQL)</a>\n'
-    '• <a href="https://www.youtube.com/watch?v=HVQNxdI6fqY">Практический курс SQL: PostgreSQL</a>\n\n'
+    '• <a href="https://github.com/">GitHub</a> — для портфолио\n\n'
+)
+
+COMMON_COMPANIES = (
     "<b>🏢 Компании со стажировками</b>\n"
     '• <a href="https://yandex.ru/yaintern/">Яндекс</a>\n'
     '• <a href="https://education.tbank.ru/start/">Т-Банк (Тинькофф)</a>\n'
@@ -95,9 +86,166 @@ FIRST_INTERNSHIP_TEXT = (
     '• <a href="https://careers.kaspersky.ru/">Лаборатория Касперского</a>\n'
     '• <a href="https://www.jetbrains.com/careers/internships/">JetBrains</a>\n'
     '• <a href="https://buildyourfuture.withgoogle.com/internships">Google</a>\n\n'
+)
+
+COMMON_TIP = (
     "💡 <i>Совет от Шурика: откликайтесь сразу в 15–20 мест. "
     "Одного отказа — ещё не повод бросать.</i>"
 )
+
+# ── Видео, которые уже были в гайде (переиспользуются в нескольких направлениях) ──
+
+VIDEO_PYTHON = (
+    "<i>Python</i>\n"
+    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFXgfuxOEDTCwsWmKezOaDTu">Плейлист: Python для начинающих</a>\n'
+    '• <a href="https://www.youtube.com/watch?v=P2Spqz_CXM8">Полный курс Python в одном видео</a>\n'
+)
+VIDEO_LINUX = (
+    "<i>Linux</i>\n"
+    '• <a href="https://www.youtube.com/playlist?list=PLg5SS_4L6LYuE4z-3BgLYGkZrs-cF4Tep">Плейлист: Linux для начинающих</a>\n'
+    '• <a href="https://www.youtube.com/playlist?list=PL0lO_mIqDDFUwVWvVitxG2oXA6a-Nq-Qq">Linux Ubuntu и Bash с нуля</a>\n'
+)
+VIDEO_SQL = (
+    "<i>Базы данных</i>\n"
+    '• <a href="https://www.youtube.com/watch?v=IK6e1SFCdow">SQL для начинающих: SELECT, JOIN, GROUP BY (MySQL)</a>\n'
+    '• <a href="https://www.youtube.com/watch?v=HVQNxdI6fqY">Практический курс SQL: PostgreSQL</a>\n'
+)
+
+# ── Тексты направлений ──
+
+PYTHON_TEXT = (
+    "🐍 <b>Python-разработчик: первая стажировка</b>\n\n"
+    "Я рекомендую действовать по плану — как перед сессией.\n\n"
+    "<b>🧠 Навыки, которые нужны</b>\n"
+    "• <b>Python</b> — синтаксис, ООП, функции, исключения, типизация, async\n"
+    "• <b>Веб-фреймворк</b> — FastAPI, Django или Flask (хватит одного)\n"
+    "• <b>Базы данных</b> — реляционная модель, SQL, JOIN, индексы, PostgreSQL\n"
+    "• <b>REST API</b> — HTTP, коды ответов, JSON, авторизация\n"
+    "• <b>Git и GitHub</b> — ветки, pull request'ы, разрешение конфликтов\n"
+    "• <b>Linux</b> — терминал, файловая система, права доступа\n"
+    "• <b>Тесты</b> — pytest на базовом уровне\n"
+    "• <b>Docker</b> — собрать образ и поднять приложение с БД\n"
+    "• <b>Алгоритмы</b> — массивы, словари, сортировки, сложность\n"
+    + COMMON_SKILLS
+    + "<b>📚 Где учиться</b>\n"
+    '• <a href="https://docs.python.org/3/tutorial/">Официальный туториал Python</a>\n'
+    '• <a href="https://fastapi.tiangolo.com/tutorial/">Туториал FastAPI</a>\n'
+    '• <a href="https://docs.djangoproject.com/en/stable/intro/tutorial01/">Туториал Django</a>\n'
+    '• <a href="https://roadmap.sh/python">Roadmap: Python</a>\n'
+    '• <a href="https://www.coursera.org/">Coursera</a> и '
+    '<a href="https://stepik.org/">Stepik</a> — для курсов\n\n'
+    "<b>🎥 Видео по темам</b>\n"
+    + VIDEO_PYTHON
+    + VIDEO_LINUX
+    + VIDEO_SQL
+    + "\n"
+    + COMMON_JOBS
+    + COMMON_COMPANIES
+    + COMMON_TIP
+)
+
+DEVOPS_TEXT = (
+    "⚙️ <b>DevOps: первая стажировка</b>\n\n"
+    "DevOps — не стартовая позиция «с нуля», но на стажировку или junior "
+    "попасть реально, если уверенно держишь базу.\n\n"
+    "<b>🧠 Навыки, которые нужны</b>\n"
+    "• <b>Linux</b> — терминал, процессы, systemd, права доступа, логи\n"
+    "• <b>Сети</b> — TCP/IP, DNS, HTTP/HTTPS, порты, NAT, firewall\n"
+    "• <b>Bash и Python</b> — автоматизация рутины скриптами\n"
+    "• <b>Git</b> — ветки, merge/rebase, рабочие процессы команды\n"
+    "• <b>Docker</b> — образы, контейнеры, volumes, docker compose\n"
+    "• <b>CI/CD</b> — GitHub Actions или GitLab CI: сборка, тесты, деплой\n"
+    "• <b>Kubernetes</b> — pod, deployment, service (на уровне основ)\n"
+    "• <b>IaC</b> — Terraform и/или Ansible\n"
+    "• <b>Мониторинг</b> — Prometheus, Grafana, логирование\n"
+    "• <b>Облака</b> — базовые сервисы любого провайдера\n"
+    + COMMON_SKILLS
+    + "<b>📚 Где учиться</b>\n"
+    '• <a href="https://roadmap.sh/devops">Roadmap: DevOps</a>\n'
+    '• <a href="https://docs.docker.com/get-started/">Docker: Get Started</a>\n'
+    '• <a href="https://kubernetes.io/docs/tutorials/">Kubernetes: туториалы</a>\n'
+    '• <a href="https://docs.github.com/en/actions">GitHub Actions: документация</a>\n'
+    '• <a href="https://developer.hashicorp.com/terraform/tutorials">Terraform: туториалы</a>\n\n'
+    "<b>🎥 Видео по темам</b>\n"
+    + VIDEO_LINUX
+    + VIDEO_PYTHON
+    + "\n"
+    "💪 <i>Пет-проект: подними своё приложение в Docker, настрой CI/CD "
+    "и мониторинг, выложи конфиги на GitHub.</i>\n\n"
+    + COMMON_JOBS
+    + COMMON_COMPANIES
+    + COMMON_TIP
+)
+
+GO_TEXT = (
+    "🐹 <b>Go-разработчик: первая стажировка</b>\n\n"
+    "Go любят за простоту и скорость, его активно используют в бэкенде "
+    "и инфраструктуре.\n\n"
+    "<b>🧠 Навыки, которые нужны</b>\n"
+    "• <b>Go</b> — синтаксис, структуры, интерфейсы, обработка ошибок\n"
+    "• <b>Конкурентность</b> — горутины, каналы, sync, context\n"
+    "• <b>net/http</b> — написать REST API без фреймворка, затем с chi/gin\n"
+    "• <b>Базы данных</b> — SQL, PostgreSQL, database/sql или pgx\n"
+    "• <b>Тесты</b> — пакет testing, табличные тесты\n"
+    "• <b>Git и GitHub</b> — ветки, pull request'ы\n"
+    "• <b>Linux</b> — терминал, сборка и запуск сервисов\n"
+    "• <b>Docker</b> — упаковать сервис и БД в контейнеры\n"
+    "• <b>gRPC и очереди</b> — знакомство (плюс при отборе)\n"
+    "• <b>Алгоритмы</b> — структуры данных и сложность\n"
+    + COMMON_SKILLS
+    + "<b>📚 Где учиться</b>\n"
+    '• <a href="https://go.dev/tour/">A Tour of Go</a> — официальный интерактивный тур\n'
+    '• <a href="https://gobyexample.com/">Go by Example</a>\n'
+    '• <a href="https://go.dev/doc/effective_go">Effective Go</a>\n'
+    '• <a href="https://roadmap.sh/golang">Roadmap: Go</a>\n'
+    '• <a href="https://stepik.org/">Stepik</a> — курсы на русском\n\n'
+    "<b>🎥 Видео по темам</b>\n"
+    + VIDEO_LINUX
+    + VIDEO_SQL
+    + "\n"
+    "💪 <i>Пет-проект: сервис-сокращатель ссылок или TODO API на Go "
+    "с PostgreSQL, тестами и Dockerfile.</i>\n\n"
+    + COMMON_JOBS
+    + COMMON_COMPANIES
+    + COMMON_TIP
+)
+
+FRONTEND_TEXT = (
+    "🎨 <b>Frontend: первая стажировка</b>\n\n"
+    "Во фронтенде портфолио решает почти всё — его можно показать "
+    "в одну ссылку.\n\n"
+    "<b>🧠 Навыки, которые нужны</b>\n"
+    "• <b>HTML и CSS</b> — семантика, flexbox, grid, адаптивная вёрстка\n"
+    "• <b>JavaScript</b> — ES6+, DOM, события, замыкания, промисы, async/await\n"
+    "• <b>TypeScript</b> — базовые типы, интерфейсы, дженерики\n"
+    "• <b>React</b> — компоненты, хуки, состояние, роутинг (или Vue)\n"
+    "• <b>Работа с API</b> — fetch, JSON, обработка ошибок и загрузки\n"
+    "• <b>Инструменты</b> — npm, Vite, ESLint, DevTools в браузере\n"
+    "• <b>Git и GitHub</b> — ветки, pull request'ы\n"
+    "• <b>Основы UX</b> — доступность (a11y), производительность\n"
+    + COMMON_SKILLS
+    + "<b>📚 Где учиться</b>\n"
+    '• <a href="https://roadmap.sh/frontend">Roadmap: Frontend</a>\n'
+    '• <a href="https://developer.mozilla.org/ru/docs/Learn">MDN: учебные материалы</a>\n'
+    '• <a href="https://learn.javascript.ru/">Современный учебник JavaScript</a>\n'
+    '• <a href="https://react.dev/learn">React: официальное обучение</a>\n'
+    '• <a href="https://www.typescriptlang.org/docs/">TypeScript: документация</a>\n'
+    '• <a href="https://www.frontendmentor.io/">Frontend Mentor</a> — задачи для практики\n\n'
+    "💪 <i>Портфолио: 3 проекта — адаптивный лендинг, приложение "
+    "с запросами к API и один проект на React + TypeScript. "
+    "Выложи на GitHub Pages или Vercel.</i>\n\n"
+    + COMMON_JOBS
+    + COMMON_COMPANIES
+    + COMMON_TIP
+)
+
+# callback_data -> (текст экрана)
+DIRECTION_TEXTS = {
+    "dir_python": PYTHON_TEXT,
+    "dir_devops": DEVOPS_TEXT,
+    "dir_go": GO_TEXT,
+    "dir_frontend": FRONTEND_TEXT,
+}
 
 GROW_TEXT = (
     "📈 <b>как расти дальше?</b>\n\n"
@@ -131,10 +279,31 @@ def start_kb() -> InlineKeyboardMarkup:
 def menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🎯 как попасть на первую стажировку", callback_data="first")],
-            [InlineKeyboardButton(text="📈 как расти дальше?", callback_data="grow")],
-            [InlineKeyboardButton(text="⭐ что самое главное в работе стажёра?", callback_data="main")],
-            [InlineKeyboardButton(text="🗓 карьерная консультация", callback_data="consult")],
+            [InlineKeyboardButton(text="как попасть на первую стажировку", callback_data="first")],
+            [InlineKeyboardButton(text="как расти по грейду?", callback_data="grow")],
+            [InlineKeyboardButton(text="полный гайд по трудоустройству в big-tech", callback_data="main")],
+            [InlineKeyboardButton(text="карьерная консультация", callback_data="consult")],
+        ]
+    )
+
+
+def directions_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🐍 Python-разработчик", callback_data="dir_python")],
+            [InlineKeyboardButton(text="⚙️ DevOps", callback_data="dir_devops")],
+            [InlineKeyboardButton(text="🐹 Go-разработчик", callback_data="dir_go")],
+            [InlineKeyboardButton(text="🎨 Frontend", callback_data="dir_frontend")],
+            [InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="menu")],
+        ]
+    )
+
+
+def direction_back_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ К выбору направления", callback_data="first")],
+            [InlineKeyboardButton(text="🏠 В меню", callback_data="menu")],
         ]
     )
 
@@ -271,7 +440,14 @@ async def cb_menu(call: CallbackQuery) -> None:
 
 @dp.callback_query(F.data == "first")
 async def cb_first(call: CallbackQuery) -> None:
-    await show(call, FIRST_INTERNSHIP_TEXT, back_kb())
+    """Экран выбора направления."""
+    await show(call, DIRECTIONS_TEXT, directions_kb())
+
+
+@dp.callback_query(F.data.in_(DIRECTION_TEXTS.keys()))
+async def cb_direction(call: CallbackQuery) -> None:
+    """Гайд для выбранного направления."""
+    await show(call, DIRECTION_TEXTS[call.data], direction_back_kb())
 
 
 @dp.callback_query(F.data == "grow")
